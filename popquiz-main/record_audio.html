@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时录音</title>
+</head>
+<body>
+    <button id="start">开始录音</button>
+    <button id="stop">停止录音</button>
+
+    <script>
+        let mediaRecorder;
+        let socket;
+
+        document.getElementById("start").addEventListener("click", async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            socket = new WebSocket("ws://127.0.0.1:8000/record-audio");
+
+            mediaRecorder.ondataavailable = async (event) => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(event.data);
+                }
+            };
+
+            mediaRecorder.start();
+        });
+
+        document.getElementById("stop").addEventListener("click", () => {
+            mediaRecorder.stop();
+            socket.close();
+        });
+    </script>
+</body>
+</html>
