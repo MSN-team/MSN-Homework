@@ -1,0 +1,5 @@
+pip install flask_restful==0.3.9
+pip install flask_sqlalchemy
+pip install flask
+pip install flask_migrate
+pip install flask_cors==3.0.10
