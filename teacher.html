@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>微课堂 · 演讲者界面</title>
+    <style>
+        /* 1. 基础排版与主题色 */
+        :root {
+            --primary: #6A82FB;  /* 蓝紫渐变起点 */
+            --primary-end: #FC5C7D; /* 渐变终点 */
+            --card-bg: #fff;
+            --border: #e0e4ef;
+            --radius: 12px;
+            --shadow: 0 4px 16px rgba(0,0,0,.08);
+            --text-gray: #666;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Segoe UI", "PingFang SC", sans-serif; background: #f6f8ff; }
+
+        /* 2. 顶栏 */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-end) 100%);
+            color: #fff;
+            padding: 0 28px;
+            height: 72px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+        }
+        .navbar .left, .navbar .right { display: flex; align-items: center; }
+        .avatar-btn {
+            width: 44px; height: 44px;
+            border-radius: 50%; background: rgba(255,255,255,0.25);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; position: relative;
+        }
+        .avatar-btn img { width: 24px; height: 24px; }
+        /* 简易下拉 */
+        .dropdown { 
+            position: absolute; top: 46px; left: 0;
+            background: #fff; color: #333; border-radius: var(--radius);
+            box-shadow: var(--shadow); width: 140px; padding: 8px 0;
+            display: none; flex-direction: column; z-index: 10;
+        }
+        .dropdown a {
+            padding: 8px 16px; text-decoration: none; color: inherit; font-size: 14px;
+        }
+        .dropdown a:hover { background: #f0f2ff; }
+
+        /* 3. 主内容卡片 */
+        .wrapper { max-width: 960px; margin: 40px auto; padding: 0 24px; }
+        .card {
+            background: var(--card-bg); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 32px;
+        }
+        .question-text { font-size: 18px; margin-bottom: 16px; }
+        .answer-row { margin-top: 24px; }
+        .answer-row span { font-weight: 600; }
+        .options {
+            margin-top: 16px;
+        }
+        .option {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: #f5f7ff;
+            margin-top: 8px;
+            font-size: 16px;
+            cursor: not-allowed;
+        }
+        /* 4. 统计框样式 */
+        .statistics {
+            margin-top: 32px; 
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+        }
+
+        .stat-item {
+            padding: 20px;
+            border-radius: var(--radius);
+            background: #FCF7FF;  /* 淡紫色背景 */
+            border: 1px solid #D8B9F0;  /* 边框使用浅紫色 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            font-size: 18px;
+            color: var(--primary);
+        }
+
+        .stat-item span {
+            font-weight: bold;
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- 1. 导航栏 -->
+<div class="navbar">
+    <div class="left">
+        <div class="avatar-btn" id="avatarBtn">
+            <!-- 使用任意占位头像；可替换为SVG或真实头像 -->
+            <img src="https://cdn.jsdelivr.net/gh/placeholderuser/identicons/placeholder.png" alt="用户中心" />
+            <div class="dropdown" id="dropdown">
+                <a href="#">个人信息</a>
+                <a href="#">退出登录</a>
+            </div>
+        </div>
+        <h3 style="margin-left:20px;">微课堂</h3>
+    </div>
+    <div class="right">
+        <span style="font-size:15px; font-weight:500;">演讲者界面</span>
+    </div>
+</div>
+
+<!-- 2. 主内容 -->
+<div class="wrapper">
+    <section class="card" id="qaCard">
+        <!-- 题目文本 -->
+        <div class="question-text" id="questionText">题目：加载中...</div>
+
+        <!-- 选项区域 -->
+        <div class="options" id="optionsArea">
+            <!-- JS 渲染 -->
+        </div>
+
+        <!-- 正确答案行 -->
+        <div class="answer-row" id="answerRow">
+            <span>正确答案：</span><span id="correctAnswerText"></span>
+        </div>
+
+        <!-- 统计框 -->
+        <div class="statistics">
+            <div class="stat-item">
+                <span>答题人数：</span><span id="answerCount">219</span>
+            </div>
+            <div class="stat-item">
+                <span>正确率：</span><span id="correctRate">79%</span>
+            </div>
+            <div class="stat-item">
+                <span>错误率：</span><span id="errorRate">21%</span>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+/* ---------- 1. 顶栏下拉 ---------- */
+const avatarBtn = document.getElementById('avatarBtn');
+const dropdown = document.getElementById('dropdown');
+avatarBtn.addEventListener('click', () => {
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+});
+window.addEventListener('click', e => {
+    if (!avatarBtn.contains(e.target)) dropdown.style.display = 'none';
+});
+
+/* ---------- 2. 虚拟题目数据 ---------- */
+const mockData = {
+    question: "猫有几种颜色？",
+    options: {
+        A: "黑色",
+        B: "粉色",
+        C: "黄色",
+        D: "蓝色"
+    },
+    correct: "C"
+};
+
+/* ---------- 3. 渲染题目与选项 ---------- */
+const questionTextDom = document.getElementById("questionText");
+const optionsArea = document.getElementById("optionsArea");
+const correctAnswerText = document.getElementById("correctAnswerText");
+
+function renderQuestion(data) {
+    if (!data || !data.question) {
+        questionTextDom.textContent = "题目：未接收到题目";
+        return;
+    }
+    questionTextDom.textContent = "题目：" + data.question;
+
+    // 渲染选项
+    optionsArea.innerHTML = "";
+    for (const key of ["A", "B", "C", "D"]) {
+        const text = data.options?.[key] ?? "";
+        const div = document.createElement("div");
+        div.className = "option";
+        div.textContent = `${key}: ${text}`;
+        optionsArea.appendChild(div);
+    }
+
+    // 渲染正确答案
+    correctAnswerText.textContent = data.correct === "A" ? "黑色" :
+                                    data.correct === "B" ? "粉色" :
+                                    data.correct === "C" ? "黄色" : "蓝色";
+}
+renderQuestion(mockData);
+
+/* ---------- 4. 模拟统计数据 ---------- */
+const answerCount = document.getElementById("answerCount");
+const correctRate = document.getElementById("correctRate");
+const errorRate = document.getElementById("errorRate");
+
+// 这里我们使用虚拟数据，后期会与后端进行对接
+answerCount.textContent = "219";
+correctRate.textContent = "79%";
+errorRate.textContent = "21%";
+
+</script>
+</body>
+</html>
