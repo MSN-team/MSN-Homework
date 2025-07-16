@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>微课堂 · 听众界面</title>
+<style>
+    /* 1. 基础排版与主题色 */
+    :root {
+        --primary: #6A82FB;  /* 蓝紫渐变起点 */
+        --primary-end: #FC5C7D; /* 渐变终点 */
+        --card-bg: #fff;
+        --border: #e0e4ef;
+        --radius: 12px;
+        --shadow: 0 4px 16px rgba(0,0,0,.08);
+        --text-gray: #666;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Segoe UI", "PingFang SC", sans-serif; background: #f6f8ff; }
+
+    /* 2. 顶栏 */
+    .navbar {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-end) 100%);
+        color: #fff;
+        padding: 0 28px;
+        height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: var(--shadow);
+    }
+    .navbar .left, .navbar .right { display: flex; align-items: center; }
+    .avatar-btn {
+        width: 44px; height: 44px;
+        border-radius: 50%; background: rgba(255,255,255,0.25);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; position: relative;
+    }
+    .avatar-btn img { width: 24px; height: 24px; }
+    /* 简易下拉 */
+    .dropdown {
+        position: absolute; top: 46px; left: 0;
+        background: #fff; color: #333; border-radius: var(--radius);
+        box-shadow: var(--shadow); width: 140px; padding: 8px 0;
+        display: none; flex-direction: column; z-index: 10;
+    }
+    .dropdown a {
+        padding: 8px 16px; text-decoration: none; color: inherit; font-size: 14px;
+    }
+    .dropdown a:hover { background: #f0f2ff; }
+
+    /* 3. 主内容卡片 */
+    .wrapper { max-width: 960px; margin: 40px auto; padding: 0 24px; }
+    .card {
+        background: var(--card-bg); border-radius: var(--radius);
+        box-shadow: var(--shadow); padding: 32px;
+    }
+    .question-text { font-size: 18px; margin-bottom: 16px; }
+    .options { display: flex; flex-direction: column; gap: 12px; }
+    .option {
+        border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 12px 16px; cursor: pointer; position: relative;
+        display: flex; align-items: center; transition: .15s;
+    }
+    .option:hover { background: #f5f7ff; }
+    .option.selected { border-color: var(--primary); background: #f0f4ff; }
+    .option.disabled {
+        background: #f0f4ff; cursor: not-allowed; pointer-events: none;
+    }
+    .option::before {
+        content: attr(data-label); font-weight: 600; margin-right: 12px;
+    }
+    .answer-row, .comment-row { margin-top: 24px; }
+    .answer-row span { font-weight: 600; }
+    .comment-row textarea {
+        width: 100%; height: 80px; padding: 8px 12px;
+        border: 1px solid var(--border); border-radius: var(--radius);
+        resize: vertical; font-size: 14px;
+    }
+    .comment-row button {
+        margin-top: 8px; padding: 12px 24px; font-size: 14px;
+        background: var(--primary); color: #fff; border: none;
+        border-radius: var(--radius); cursor: pointer;
+    }
+    .comment-row button:hover { opacity: .9; }
+
+    /* 提交按钮 */
+    .submit-btn {
+        margin-top: 16px;
+        padding: 12px 24px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 16px;
+        display: none;
+    }
+    .submit-btn:hover {
+        opacity: 0.8;
+    }
+    .submit-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+</style>
+</head>
+<body>
+
+<!-- 1. 导航栏 -->
+<div class="navbar">
+    <div class="left">
+        <div class="avatar-btn" id="avatarBtn">
+            <!-- 使用任意占位头像；可替换为SVG或真实头像 -->
+            <img src="https://cdn.jsdelivr.net/gh/placeholderuser/identicons/placeholder.png" alt="用户中心" />
+            <div class="dropdown" id="dropdown">
+                <a href="#">个人信息</a>
+                <a href="#">退出登录</a>
+            </div>
+        </div>
+        <h3 style="margin-left:20px;">微课堂</h3>
+    </div>
+    <div class="right">
+        <span style="font-size:15px; font-weight:500;">听众界面</span>
+    </div>
+</div>
+
+<!-- 2. 主内容 -->
+<div class="wrapper">
+    <section class="card" id="qaCard">
+        <div class="question-text" id="questionText">题目：加载中...</div>
+
+        <!-- 选项 -->
+        <div class="options" id="optionsArea">
+            <!-- JS 渲染 -->
+        </div>
+
+        <!-- 提交按钮 -->
+        <button id="submitBtn" class="submit-btn" disabled>提交答案</button>
+
+        <!-- 正确答案行：初始隐藏 -->
+        <div class="answer-row" id="answerRow" style="display:none;">
+            <span>正确答案：</span><span id="correctAnswerText"></span>
+        </div>
+
+        <!-- 评论 -->
+        <div class="comment-row">
+            <textarea id="commentInput" placeholder="输入评论..."></textarea>
+            <button id="commentBtn">提交评论</button>
+        </div>
+    </section>
+</div>
+
+<script>
+/* ---------- 1. 顶栏下拉 ---------- */
+const avatarBtn = document.getElementById('avatarBtn');
+const dropdown = document.getElementById('dropdown');
+avatarBtn.addEventListener('click', () => {
+    dropdown.style.display = dropdown.style.display === 'flex' ? 'none' : 'flex';
+});
+window.addEventListener('click', e => {
+    if (!avatarBtn.contains(e.target)) dropdown.style.display = 'none';
+});
+
+/* ---------- 2. 虚拟题目数据 ---------- */
+const mockData = {
+    question: "猫有几种颜色？",
+    options: {
+        A: "黑色",
+        B: "粉色",
+        C: "黄色",
+        D: "蓝色"
+    },
+    correct: "C"
+};
+
+/* ---------- 3. 渲染题目 ---------- */
+const questionTextDom = document.getElementById("questionText");
+const optionsArea = document.getElementById("optionsArea");
+const answerRow = document.getElementById("answerRow");
+const correctAnswerText = document.getElementById("correctAnswerText");
+const submitBtn = document.getElementById("submitBtn");
+
+let selected = null;
+
+function renderQuestion(data) {
+    if (!data || !data.question) {
+        questionTextDom.textContent = "题目：未接收到题目";
+        return;
+    }
+    questionTextDom.textContent = "题目：" + data.question;
+
+    optionsArea.innerHTML = ""; // 清空
+    for (const key of ["A", "B", "C", "D"]) {
+        const text = data.options?.[key] ?? "";
+        const div = document.createElement("div");
+        div.className = "option";
+        div.dataset.label = key;
+        div.textContent = text;
+        div.addEventListener("click", () => chooseOption(key, div));
+        optionsArea.appendChild(div);
+    }
+}
+
+renderQuestion(mockData);
+
+/* ---------- 4. 选项点击逻辑 ---------- */
+function chooseOption(key, dom) {
+    // 如果已选择过就不再允许点击
+    if (selected) return;
+
+    // 取消其他选中
+    document.querySelectorAll(".option").forEach(o => o.classList.remove("selected"));
+    dom.classList.add("selected");
+    selected = key;
+
+    // 显示提交按钮
+    submitBtn.style.display = "inline-block";
+    submitBtn.disabled = false;
+}
+
+/* ---------- 5. 提交答案 ---------- */
+submitBtn.addEventListener("click", () => {
+    if (!selected) return alert("请先选择一个答案");
+
+    // 提交答案的逻辑
+    console.log("选择答案：", selected);
+
+    // 显示正确答案
+    correctAnswerText.textContent = selected === mockData.correct
+        ? `✅ ${selected}（${mockData.options[selected]}） - 回答正确`
+        : `❌ 正确是 ${mockData.correct}（${mockData.options[mockData.correct]}）`;
+    answerRow.style.display = "block";
+
+    // 禁用所有选项和提交按钮
+    document.querySelectorAll(".option").forEach(option => {
+        option.classList.add("disabled");
+        option.removeEventListener("click", chooseOption); // 禁用点击事件
+    });
+    submitBtn.disabled = true;
+});
+
+/* ---------- 6. 评论提交 ---------- */
+document.getElementById("commentBtn").addEventListener("click", () => {
+    const text = document.getElementById("commentInput").value.trim();
+    if (!text) return alert("请输入评论内容~");
+    console.log("发送评论：", text);
+    document.getElementById("commentInput").value = "";
+});
+</script>
+
+</body>
+</html>
