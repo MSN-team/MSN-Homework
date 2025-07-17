@@ -12,7 +12,7 @@ const api = {
    getRegister(params) {
     return axios.post(base.baseUrl + base.register, params)
    },
-}
 
+}
 
 export default api

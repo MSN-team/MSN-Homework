@@ -15,7 +15,7 @@
           <label for="name" class="el-form-item__label">用户名</label>
           <el-input v-model="user.name" id="name" placeholder="请输入用户名" :prefix-icon="User" />
         </el-form-item>
-        
+
         <el-form-item prop="pwd">
           <label for="pwd" class="el-form-item__label">密码</label>
           <el-input 
@@ -24,6 +24,7 @@
         
         <el-form-item class="btns">
           <el-button type="primary" @click="handleLogin(userFormRef)">登录</el-button>
+
           <el-button type="success" @click="handleRegister">注册</el-button>
         </el-form-item>
       </el-form>
@@ -42,6 +43,7 @@ const user = reactive({
   identity: 'student',
   name: '',
   pwd: ''
+
 });
 
 // 表单验证规则

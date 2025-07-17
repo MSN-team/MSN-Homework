@@ -15,6 +15,7 @@ flask db stamp head（将当前版本设置为head）
 .\flask_venv\Scripts\Activate
 $env:FLASK_APP="myapp"
 yarn serve
+
 '''
 if __name__ == '__main__':
     app.run()

@@ -2,59 +2,53 @@
 # -*- coding: utf-8 -*-
 """
 PopQuiz FastAPI
-- /submit-text      上传纯文本 → Whisper ↓
-- /upload-audio     上传整段音频文件
-- /record-audio     WebSocket 实时录音
+- /submit-text      上传纯文本
+- /upload-pdf       上传 PDF → 生成 Quiz
 可在无 MongoDB 环境下自动降级为内存集合，或设 USE_DB=0 强制内存模式。
 """
 
-import os, uuid, logging, asyncio, aiofiles
+import os, uuid, logging, asyncio, aiofiles, functools
 from datetime import datetime
 from pathlib import Path
 from typing import Any, List
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, WebSocket, WebSocketDisconnect
-from fastapi.encoders import jsonable_encoder
+from fastapi import (
+    FastAPI, HTTPException, UploadFile, File,
+    WebSocket, WebSocketDisconnect
+)
 from fastapi.staticfiles import StaticFiles
 from pymongo import MongoClient, errors as mongoerr
 import whisper
 
-# ───────────────────────────────
-# 日志
-# ───────────────────────────────
+
+app = FastAPI()
+
+# ─────────────── 日志 ───────────────
 logging.basicConfig(
     level=os.getenv("QUIZ_LOG_LEVEL", "INFO").upper(),
     format="%(levelname)s | %(message)s",
 )
 log = logging.getLogger(__name__)
 
-# ───────────────────────────────
-# MongoDB or In-Memory fallback
-# ───────────────────────────────
+# ───── Mongo ? Memory fallback ─────
 def _mem_collection() -> Any:
-    """简单内存集合，支持 insert_one / count_documents"""
     store: List[dict] = []
-
     class _Mem:
-        def insert_one(self, doc: dict):
-            doc["_id"] = uuid.uuid4().hex
-            store.append(doc)
-            return type("R", (), {"inserted_id": doc["_id"]})()
-
-        def count_documents(self, _filter):
-            return len(store)
-
+        def insert_one(self, d):
+            d["_id"] = uuid.uuid4().hex
+            store.append(d)
+            return type("R", (), {"inserted_id": d["_id"]})()
+        def count_documents(self, *_): return len(store)
     return _Mem()
 
 def _init_collections():
     if os.getenv("USE_DB", "1") == "0":
         log.warning("USE_DB=0 → 使用内存集合")
         return _mem_collection(), _mem_collection()
-
     try:
         uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
         client = MongoClient(uri, serverSelectionTimeoutMS=3000)
-        client.server_info()                          # 立即触发连接
+        client.server_info()
         db = client["popquiz"]
         log.info("MongoDB 连接成功")
         return db["contents"], db["quizzes"]
@@ -64,32 +58,62 @@ def _init_collections():
 
 content_collection, quiz_collection = _init_collections()
 
-# ───────────────────────────────
-# Whisper — 单例
-# ───────────────────────────────
-import functools
+# ───────────── Whisper 单例 ─────────────
 @functools.lru_cache()
 def get_whisper():
     return whisper.load_model("base")
 
-# ───────────────────────────────
-# 业务依赖：生成题目
-# ───────────────────────────────
-from services import generate_quiz_with_deepseek   # 本地 services.py
+# ───────────── PDF util ─────────────
+import pdfplumber
+def extract_text_from_pdf(path: str) -> str:
+    txt = []
+    with pdfplumber.open(path) as pdf:
+        for pg in pdf.pages:
+            t = pg.extract_text() or ""
+            txt.append(t.strip())
+    return "\n".join(txt).strip()
 
-# ───────────────────────────────
-# FastAPI 应用
-# ───────────────────────────────
+def split_document(text: str, chunk: int = 3000) -> list[str]:
+    return [text[i:i+chunk] for i in range(0, len(text), chunk)]
+
+# ───────────── 生成 Quiz ─────────────
+from services import generate_quiz_with_deepseek
+
+async def _run_quiz(text: str):
+    try:
+        quizzes_raw = await asyncio.to_thread(
+            generate_quiz_with_deepseek, text
+        )
+        if not quizzes_raw:
+            log.error("LLM 返回空列表")
+            return None
+        return [{"quiz_id": q["quiz_id"], "quiz": q["quiz"]}
+                for q in quizzes_raw]
+    except Exception as exc:
+        log.exception("出题失败: %s", exc)
+        return None
+
+def _json_ok(cid, quizzes):
+    return {"status": "success", "content_id": str(cid), "quizzes": quizzes}
+
+def _json_err(detail): return {"status": "error", "detail": detail}
+
+# ───────────── FastAPI ─────────────
 app = FastAPI(title="PopQuiz API")
 
 @app.get("/")
 async def home():
-    return {"message": "PopQuiz ready ✨"}
+    return {
+        "message": "PopQuiz ready ?",
+        "endpoints": [
+            "/submit-text", "/upload-pdf", "/record-audio"
+        ],
+    }
 
-# ────────── 插入种子数据（仅首次 / 有 DB 功能时） ──────────
+# ───── 插入种子数据（可选） ─────
 @app.on_event("startup")
 async def seed():
-    if hasattr(content_collection, "count_documents") and content_collection.count_documents({}) == 0:
+    if content_collection.count_documents({}) == 0:
         content_collection.insert_one({
             "title": "AI 技术的未来",
             "type": "text",
@@ -98,67 +122,74 @@ async def seed():
         })
         log.info("Seed content inserted")
 
-# ────────── 工具函数 ──────────
-async def _run_quiz(text: str):
-    try:
-        quizzes_raw = await asyncio.to_thread(generate_quiz_with_deepseek, text)
-        if not quizzes_raw:
-            log.error("LLM 返回空列表")
-            return None
-        return [{"quiz_id": q["quiz_id"], "quiz": q["quiz"]} for q in quizzes_raw]
-    except Exception as exc:
-        log.exception("出题失败: %s", exc)
-        return None
-
-def _json_ok(cid, quizzes):
-    return {"status": "success", "content_id": str(cid), "quizzes": quizzes}
-
-def _json_err(detail):
-    return {"status": "error", "detail": detail}
-
 # ────────── 上传纯文本 ──────────
 @app.post("/submit-text")
-async def submit_text(payload: dict):
-    text = payload.get("text", "").strip()
-    if not text:
-        raise HTTPException(400, "text 字段不能为空")
+async def submit_text(file: UploadFile = File(...)):
+    try:
+        if not file.filename.endswith(".txt"):
+            raise HTTPException(status_code=400, detail="Only .txt files are supported.")
 
-    cid = content_collection.insert_one({
-        "title": "文本内容",
-        "type": "text",
-        "data": text,
-        "created_at": datetime.utcnow().isoformat()
-    }).inserted_id
+        content = await file.read()
 
-    quizzes = await _run_quiz(text)
-    return _json_ok(cid, quizzes) if quizzes else _json_err("题目生成失败")
+        # 尝试按UTF-8解码文件内容
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                text = content.decode("ISO-8859-1")  # 使用ISO-8859-1作为备选解码
+            except UnicodeDecodeError:
+                raise HTTPException(status_code=400, detail="Unable to decode the file.")
 
-# ────────── 上传整段音频文件 ──────────
-@app.post("/upload-audio")
-async def upload_audio(file: UploadFile = File(...)):
-    tmp = Path(f"upload_{uuid.uuid4().hex}.wav")
+        cid = content_collection.insert_one({
+            "title": file.filename, "type": "text",
+            "data": text, "created_at": datetime.utcnow().isoformat()
+        }).inserted_id
+
+        quizzes = await _run_quiz(text)
+        return _json_ok(cid, quizzes) if quizzes else _json_err("题目生成失败")
+
+    except Exception as e:
+        log.error(f"Error processing file: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
+# ────────── 上传 PDF 文件 ──────────
+@app.post("/upload-pdf")
+async def upload_pdf(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, "只支持 .pdf 文件")
+
+    tmp = Path(f"{uuid.uuid4().hex}.pdf")
     tmp.write_bytes(await file.read())
 
-    text = (await asyncio.to_thread(get_whisper().transcribe, str(tmp)))["text"]
-    tmp.unlink(missing_ok=True)
+    try:
+        text = await asyncio.to_thread(extract_text_from_pdf, str(tmp))
+    finally:
+        tmp.unlink(missing_ok=True)
+
+    if len(text) < 50:
+        return _json_err("PDF 无可用文本")
 
     cid = content_collection.insert_one({
-        "title": "语音内容",
-        "type": "audio",
-        "data": text,
+        "title": file.filename, "type": "pdf",
+        "data": text[:2000] + "…" if len(text) > 2000 else text,
         "created_at": datetime.utcnow().isoformat()
     }).inserted_id
 
-    quizzes = await _run_quiz(text)
+    quizzes: list[dict] = []
+    for segment in split_document(text):
+        qzs = await asyncio.to_thread(
+            generate_quiz_with_deepseek, segment
+        )
+        quizzes.extend(qzs)
+
     return _json_ok(cid, quizzes) if quizzes else _json_err("题目生成失败")
 
 # ────────── WebSocket 实时录音 ──────────
 @app.websocket("/record-audio")
 async def record_audio(ws: WebSocket):
     await ws.accept()
-    tmp_path = Path(f"rec_{uuid.uuid4().hex}.wav")
+    tmp_path = Path(f"{uuid.uuid4().hex}.wav")
 
-    # 1 收流
     try:
         async with aiofiles.open(tmp_path, "wb") as f:
             while True:
@@ -178,13 +209,12 @@ async def record_audio(ws: WebSocket):
         await ws.close()
         return
 
-    # 2 Whisper
     try:
-        text = (await asyncio.to_thread(get_whisper().transcribe, str(tmp_path)))["text"]
+        text = (await asyncio.to_thread(
+            get_whisper().transcribe, str(tmp_path)))["text"]
     finally:
         tmp_path.unlink(missing_ok=True)
 
-    # 3 出题
     quizzes = await _run_quiz(text)
     if not quizzes:
         await ws.send_json(_json_err("题目生成失败"))
@@ -192,10 +222,8 @@ async def record_audio(ws: WebSocket):
         return
 
     cid = content_collection.insert_one({
-        "title": "实时录音",
-        "type": "audio",
-        "data": text,
-        "created_at": datetime.utcnow().isoformat()
+        "title": "实时录音", "type": "audio",
+        "data": text, "created_at": datetime.utcnow().isoformat()
     }).inserted_id
 
     await ws.send_json(_json_ok(cid, quizzes))
