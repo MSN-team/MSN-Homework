@@ -4,7 +4,7 @@ class Config:
     MYSQL_DIALECT = 'mysql'
     MYSQL_DRIVER = 'pymysql'
     MYSQL_USERNAME = 'root'
-    MYSQL_PASSWORD = '123456'  # 移除转义字符
+    MYSQL_PASSWORD = 'zmtxzs2004@'  # 移除转义字符
     MYSQL_HOST = '127.0.0.1'
     MYSQL_PORT = 3306
     MYSQL_DATABASE = 'MSN'
@@ -18,6 +18,11 @@ class Config:
     #设置json数据不适应ascii编码
     JSON_AS_ASCII = False
 
+    # JSONIFY_PRETTYPRINT_REGULAR = False
+    # JSON_SORT_KEYS = False
+    RESETFUL_JSON = {
+        'ensure_ascii': False
+    }
 class DevelopmentConfig(Config):
     #开发环境
     # 开启调试模式
