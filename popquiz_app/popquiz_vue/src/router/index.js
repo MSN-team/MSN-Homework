@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import AudienceView from '../views/AudienceView.vue'
 import TeacherView from '../views/TeacherView.vue'
+
 const routes = [
   {
     path: '/',
@@ -30,6 +31,7 @@ const routes = [
     name: 'teacher',
     component: TeacherView
   },
+
 ]
 
 const router = createRouter({
