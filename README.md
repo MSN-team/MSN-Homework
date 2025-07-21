@@ -57,7 +57,7 @@ $ git clone https://github.com/MSN-team/MSN-Homework.git && cd popquiz_app
 $ .\flask_venv\Scripts\Activate
 （或者根据".\MSN-Homework\popquiz_app\test\install_model.txt"中安装相应的包）
 # 3. 数据库初始化
-$ flask db migrate && flask db upgrade
+$ flask db init && flask db migrate && flask db upgrade
 $ Make sure MongoDB is running locally on `mongodb://localhost:27017/`.
 # 4. 启动后端（FastAPI + Flask + MongoDB）
 $ $env:FLASK_APP="myapp" && python myapp.py 
