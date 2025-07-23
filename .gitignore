@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+popquiz_app/testsummer/.venv1/
+popquiz_app/popquiz/.venv/
+popquiz_app/flask_venv/
+popquiz_app/testsummer/__pycache__/
