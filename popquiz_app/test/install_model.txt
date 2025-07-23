@@ -3,3 +3,15 @@ pip install flask_sqlalchemy
 pip install flask
 pip install flask_migrate
 pip install flask_cors==3.0.10
+pip install cryptography
+
+'''
+flask db init
+flask db migrate 
+flask db upgrade
+flask db stamp head（将当前版本设置为head）
+.\flask_venv\Scripts\Activate
+$env:FLASK_APP="myapp"
+yarn serve
+
+'''

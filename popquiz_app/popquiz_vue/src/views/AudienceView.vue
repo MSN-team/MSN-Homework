@@ -9,10 +9,6 @@
               <div class="avatar-btn">
                 <el-avatar icon="el-icon-user" :size="44"></el-avatar>
               </div>
-              <el-dropdown-menu slot="dropdown">
-                <el-dropdown-item command="profile">个人信息</el-dropdown-item>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
             </el-dropdown>
             <h3 class="app-title">微课堂</h3>
           </div>
@@ -22,70 +18,73 @@
         </el-header>
       </el-container>
     </el-row>
-
-    <!-- 主内容区 -->
-    <el-container class="main-container">
-      <el-row :gutter="20">
-        <el-col :xs="24" :sm="24" :md="18" :lg="16" :xl="14" :offset="(24-14)/2">
-          <el-card class="main-card">
-            <div slot="header" class="card-header">
-              <span class="question-text">{{ `题目：${questionData.question}` }}</span>
-            </div>
-            
-            <!-- 选项区域 -->
-            <el-radio-group v-model="selectedOption" @change="handleOptionChange" :disabled="isSubmitted">
-              <div v-for="(option, key) in questionData.options" :key="key" class="option-item">
+    <!-- 答题和评论区域 -->
+    <div class="main-content">
+      <!-- 答题区域 -->
+      <div class="question-area">
+        <el-card class="main-card">
+          <template #header>
+            <span class="question-text">{{ `题目：${questionData.question}` }}</span>
+          </template>
+          <!-- 选项区域 -->
+          <el-radio-group v-model="selectedOption" @change="handleOptionChange" :disabled="isSubmitted">
+            <el-row :gutter="12">
+              <el-col :span="24" v-for="(option, key) in questionData.options" :key="key">
                 <el-radio :label="key" border class="radio-option">
                   <span class="option-label">{{ key }}. {{ option }}</span>
                 </el-radio>
-              </div>
-            </el-radio-group>
-            
-            <!-- 提交按钮 -->
-            <el-button 
-              class="submit-btn" 
-              type="primary" 
-              @click="submitAnswer"
-              :disabled="!selectedOption || isSubmitted"
-            >
-              提交答案
-            </el-button>
-            
-            <!-- 答案结果 -->
-            <div v-if="isSubmitted" class="answer-result">
-              <el-descriptions column="1" border>
-                <el-descriptions-item label="答案结果">
-                  <span v-if="isCorrect" class="correct-answer">
-                    <i class="el-icon-success"></i> 回答正确！正确答案是 {{ questionData.correct }}. {{ questionData.options[questionData.correct] }}
-                  </span>
-                  <span v-else class="wrong-answer">
-                    <i class="el-icon-error"></i> 回答错误！正确答案是 {{ questionData.correct }}. {{ questionData.options[questionData.correct] }}
-                  </span>
-                </el-descriptions-item>
-              </el-descriptions>
-            </div>
-            
-            <!-- 评论区域 -->
-            <div class="comment-section">
-              <el-input
-                type="textarea"
-                :rows="3"
-                placeholder="请输入您的评论..."
-                v-model="commentContent"
-              ></el-input>
-              <el-button 
-                class="comment-btn" 
-                type="primary" 
-                @click="submitComment"
-                :disabled="!commentContent.trim()"
-              >
-                提交评论
-              </el-button>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </el-container>
+              </el-col>
+            </el-row>
+          </el-radio-group>
+          <br>
+          <!-- 提交按钮 -->
+          <el-button
+            class="submit-btn"
+            type="primary"
+            @click="submitAnswer"
+            :disabled="!selectedOption || isSubmitted"
+          >
+            提交答案
+          </el-button>
+          <!-- 答案结果 -->
+          <div v-if="isSubmitted" class="answer-result">
+            <el-descriptions column="1" border>
+              <el-descriptions-item label="答案结果">
+                <span v-if="isCorrect" class="correct-answer">
+                  <i class="el-icon-success"></i> 回答正确！正确答案是 {{ questionData.correct }}. {{ questionData.options[questionData.correct] }}
+                </span>
+                <span v-else class="wrong-answer">
+                  <i class="el-icon-error"></i> 回答错误！正确答案是 {{ questionData.correct }}. {{ questionData.options[questionData.correct] }}
+                </span>
+              </el-descriptions-item>
+            </el-descriptions>
+          </div>
+        </el-card>
+      </div>
+      <!-- 评论区域 -->
+      <div class="comment-area">
+        <el-card class="comment-card">
+          <template #header>
+            <span class="question-text">评论区</span>
+          </template>
+          <el-input
+            type="textarea"
+            :rows="4"
+            placeholder="请输入评论内容..."
+            v-model="commentContent"
+          >
+          </el-input>
+          <el-button
+            class="comment-btn"
+            type="primary"
+            @click="submitComment"
+            :disabled="!commentContent.trim()"
+          >
+            提交评论
+          </el-button>
+        </el-card>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -120,17 +119,14 @@ export default {
     handleOptionChange(value) {
       this.selectedOption = value;
     },
-    
     // 提交答案
     submitAnswer() {
       if (!this.selectedOption) {
         this.$message.warning('请先选择一个答案');
         return;
       }
-      
       this.isSubmitted = true;
       this.isCorrect = this.selectedOption === this.questionData.correct;
-      
       // 显示结果提示
       if (this.isCorrect) {
         this.$message.success('回答正确！');
@@ -138,38 +134,26 @@ export default {
         this.$message.error('回答错误，请查看正确答案');
       }
     },
-    
     // 提交评论
     submitComment() {
       if (!this.commentContent.trim()) {
         this.$message.warning('请输入评论内容');
         return;
       }
-      
-      // 实际项目中这里会调用API提交评论
-      this.$message.success('评论提交成功！');
-      this.commentContent = '';
-    },
-    
-    // 处理下拉菜单命令
-    handleDropdownCommand(command) {
-      switch (command) {
-        case 'profile':
-          this.$message.info('跳转到个人信息页面');
-          break;
-        case 'logout':
-          this.$message.confirm('确定要退出登录吗？', '提示', {
-            confirmButtonText: '确定',
-            cancelButtonText: '取消',
-            type: 'warning'
-          }).then(() => {
-            this.$message.success('退出登录成功');
-          }).catch(() => {
-            this.$message.info('已取消退出');
-          });
-          break;
+      try {
+        // 实际项目中这里会调用API提交评论
+        this.$message.success('评论提交成功！');
+        this.commentContent = '';
+      } catch (error) {
+        this.$message.error('评论提交失败，请稍后重试');
+        console.error(error);
       }
-    }
+    },
+    question_add()  {
+      this.questionData = {
+        
+      }
+    }  
   }
 };
 </script>
@@ -179,7 +163,7 @@ export default {
 .navbar {
   background: linear-gradient(135deg, #6A82FB 0%, #FC5C7D 100%);
   color: #fff;
-  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .header-content {
@@ -215,17 +199,29 @@ export default {
 }
 
 /* 主内容区样式 */
-.main-container {
-  padding: 40px 24px;
-  max-width: 960px;
-  margin: 0 auto;
-  width: 100%;
+.main-content {
+  display: flex;
+  height: 80vh; /* 占据页面高度的80% */
+  padding: 20px;
 }
 
-.main-card {
+.question-area {
+  flex: 2;
+  padding-right: 20px;
+  height: 100%;
+}
+
+.comment-area {
+  flex: 1;
+  height: 100%;
+}
+
+.main-card,
+.comment-card {
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   overflow: hidden;
+  height: 100%; /* 卡片高度占满父容器 */
 }
 
 .card-header {
@@ -234,7 +230,7 @@ export default {
 }
 
 .question-text {
-  font-size: 18px;
+  font-size: 25px;
   font-weight: 500;
 }
 
@@ -248,6 +244,7 @@ export default {
   border-radius: 8px;
   padding: 12px 16px;
   transition: all 0.15s;
+  margin-bottom: 18px; /* 增加垂直边距 */
 }
 
 .radio-option:hover {
@@ -259,7 +256,8 @@ export default {
 }
 
 /* 按钮样式 */
-.submit-btn {
+.submit-btn,
+.comment-btn {
   margin-top: 24px;
   padding: 10px 20px;
 }
@@ -285,10 +283,5 @@ export default {
 /* 评论区域样式 */
 .comment-section {
   margin-top: 32px;
-}
-
-.comment-btn {
-  margin-top: 12px;
-  padding: 10px 20px;
 }
 </style>

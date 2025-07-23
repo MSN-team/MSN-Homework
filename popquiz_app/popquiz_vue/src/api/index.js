@@ -1,3 +1,4 @@
+
 import axios from "../utils/request.js"
 import base from "./base.js"
 
@@ -12,7 +13,9 @@ const api = {
    getRegister(params) {
     return axios.post(base.baseUrl + base.register, params)
    },
-
+  //  getquestion(params) {
+  //   return axios.get(base.baseUrl + base.quiz, params)
+  //  },
 }
 
 export default api

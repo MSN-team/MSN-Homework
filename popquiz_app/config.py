@@ -1,5 +1,8 @@
 import os
 from urllib.parse import quote_plus
+from pymongo import MongoClient
+from datetime import  datetime
+
 class Config:
     MYSQL_DIALECT = 'mysql'
     MYSQL_DRIVER = 'pymysql'
@@ -23,6 +26,12 @@ class Config:
     RESETFUL_JSON = {
         'ensure_ascii': False
     }
+    # # 连接 MongoDB
+    # MONGO_URI = "mongodb://localhost:27017/"
+    # client = MongoClient(MONGO_URI)
+    # db = client["popquiz"]
+    # print("? MongoDB 连接成功："+MONGO_URI+" /"+db.name)
+
 class DevelopmentConfig(Config):
     #开发环境
     # 开启调试模式

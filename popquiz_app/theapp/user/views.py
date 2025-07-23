@@ -13,6 +13,18 @@ def index():
 # def register():
 #     return render_template('register.html')
 # 登录功能
+# @user_bp.route('/quiz',methods=['POST'])
+# def quiz():
+#     sort_field="_id"
+
+#     try:
+#         # 按指定字段降序排列并取第一条
+#         latest_doc = collection.find().sort(sort_field, -1).limit(1).next()
+#         print(f"🔍 最新文档 (按 {sort_field}):")
+#         return latest_doc
+#     except StopIteration:
+#         print("❌ 集合为空")
+#         return None
 @user_bp.route('/login/', methods=['POST'])
 def login():
   # 获取用户名
