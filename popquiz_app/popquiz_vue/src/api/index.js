@@ -13,9 +13,11 @@ const api = {
    getRegister(params) {
     return axios.post(base.baseUrl + base.register, params)
    },
-  //  getquestion(params) {
-  //   return axios.get(base.baseUrl + base.quiz, params)
-  //  },
+
+   //change
+  getquestion() {
+  return axios.get(base.popquizUrl + base.quiz)
+  },
 }
 
 export default api

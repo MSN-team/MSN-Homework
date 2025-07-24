@@ -5,6 +5,17 @@ pip install flask_migrate
 pip install flask_cors==3.0.10
 pip install cryptography
 
+pip install uvicorn
+pip install fastapi
+pip install pdfplumber
+pip install pymongo
+pip install dotenv
+pip install spacy
+python -m spacy download en_core_web_sm
+
+pip install transformers
+pip install python-multipart
+pip install torch torchvision torchaudio
 '''
 flask db init
 flask db migrate 
@@ -12,6 +23,8 @@ flask db upgrade
 flask db stamp head（将当前版本设置为head）
 .\flask_venv\Scripts\Activate
 $env:FLASK_APP="myapp"
+flask_venv\Scripts\python -m uvicorn main:app --reload
 yarn serve
-
+uvicorn main:app --reload
+python main.py 
 '''

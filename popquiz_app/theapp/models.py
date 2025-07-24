@@ -26,3 +26,12 @@ class User(db.Model, BaseModel):
   def check_password(self, pwd): 
     #检查密码
     return check_password_hash(self.pwd, pwd)
+# class classroom(db.Model, BaseModel):
+#   __tablename__ = 'classroom'
+#   id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#   name = db.Column(db.String(32), unique=True,nullable=False)
+#   classId = db.Column(db.Integer, nullable=False)
+#   studentNum = db.Column(db.Integer)
+#   chooseNum = db.Column(db.Integer)
+#   correntNum = db.Column(db.Integer)
+

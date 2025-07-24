@@ -13,7 +13,10 @@
             <h3 class="app-title">微课堂</h3>
           </div>
           <div class="right-section">
-            <span class="page-title">听众界面</span>
+            <el-button class="class-button" type="primary" @click="joinClass">
+              加入课堂
+            </el-button>
+            <!-- <span class="page-title">听众界面</span> -->
           </div>
         </el-header>
       </el-container>
@@ -46,15 +49,25 @@
           >
             提交答案
           </el-button>
+          <br>
+          <!-- 刷新按钮 -->
+          <el-button
+            class="submit-btn"
+            type="primary"
+            @click="refreshQuestion"
+            :disabled="!selectedOption || isSubmitted"
+          >
+            刷新
+          </el-button>
           <!-- 答案结果 -->
           <div v-if="isSubmitted" class="answer-result">
             <el-descriptions column="1" border>
               <el-descriptions-item label="答案结果">
                 <span v-if="isCorrect" class="correct-answer">
-                  <i class="el-icon-success"></i> 回答正确！正确答案是 {{ questionData.correct }}. {{ questionData.options[questionData.correct] }}
+                  <i class="el-icon-success"></i> 回答正确！正确答案是 {{ questionData.answer }}. {{ questionData.options[questionData.answer] }}
                 </span>
                 <span v-else class="wrong-answer">
-                  <i class="el-icon-error"></i> 回答错误！正确答案是 {{ questionData.correct }}. {{ questionData.options[questionData.correct] }}
+                  <i class="el-icon-error"></i> 回答错误！正确答案是 {{ questionData.answer }}. {{ questionData.options[questionData.answer] }}
                 </span>
               </el-descriptions-item>
             </el-descriptions>
@@ -85,77 +98,131 @@
         </el-card>
       </div>
     </div>
+
+    <!-- 加入课堂表单对话框 -->
+    <el-dialog title="加入课堂" v-model="dialogVisible" width="30%">
+      <el-form :model="form" label-width="80px">
+        <el-form-item label="课堂名称">
+          <el-input v-model="form.name" placeholder="请输入老师用户名"></el-input>
+        </el-form-item>
+        <el-form-item label="课堂密码">
+          <el-input v-model="form.classid" type="classId" placeholder="请输入课堂暗号"></el-input>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="submitJoinClass">确 定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script>
+import { ElMessage } from 'element-plus'
+import api from '@/api/index.js'
+
 export default {
   name: 'MicroClassroom',
+
   data() {
     return {
-      // 题目数据
-      questionData: {
-        question: "猫有几种颜色？",
-        options: {
-          A: "黑色",
-          B: "粉色",
-          C: "黄色",
-          D: "蓝色"
-        },
-        correct: "C"
-      },
-      // 选中的选项
+      questionData: { question: '', options: { A: '', B: '', C: '', D: '' }, answer: '' },
       selectedOption: '',
-      // 是否已提交
       isSubmitted: false,
-      // 是否回答正确
       isCorrect: false,
-      // 评论内容
-      commentContent: ''
-    };
+      commentContent: '',
+      dialogVisible: false, // 对话框显示控制变量
+      form: {
+        className: '',
+        classPassword: ''
+      }
+    }
   },
+
+  computed: {
+    correctAnswerText() {
+      return this.questionData.options[this.questionData.answer] || ''
+    }
+  },
+
+  mounted() {
+    this.refreshQuestion()
+  },
+
   methods: {
-    // 处理选项变更
-    handleOptionChange(value) {
-      this.selectedOption = value;
+    joinClass() {
+      this.dialogVisible = true; // 打开对话框
     },
-    // 提交答案
+
+    submitJoinClass() {
+      // 提交加入课堂的逻辑
+      if (!this.form.className || !this.form.classPassword) {
+        ElMessage.warning('请填写课堂名称和密码')
+        return
+      }
+      // 这里可以调用后端API来验证课堂名称和密码
+      // 例如：api.joinClass(this.form.className, this.form.classPassword)
+      this.dialogVisible = false; // 关闭对话框
+      ElMessage.success('加入课堂成功！')
+    },
+
+    /* 下拉头像菜单示例 */
+    handleDropdownCommand(cmd) {
+      if (cmd === 'logout') ElMessage.info('已退出')
+      else if (cmd === 'profile') ElMessage.info('个人信息 ~')
+    },
+
+    /* 选项切换 */
+    handleOptionChange(val) {
+      this.selectedOption = val
+    },
+
+    /* 交卷 */
     submitAnswer() {
-      if (!this.selectedOption) {
-        this.$message.warning('请先选择一个答案');
-        return;
-      }
-      this.isSubmitted = true;
-      this.isCorrect = this.selectedOption === this.questionData.correct;
-      // 显示结果提示
-      if (this.isCorrect) {
-        this.$message.success('回答正确！');
-      } else {
-        this.$message.error('回答错误，请查看正确答案');
-      }
+      if (!this.selectedOption) return ElMessage.warning('请先选择一个答案')
+      this.isSubmitted = true
+      this.isCorrect = this.selectedOption === this.questionData.answer
+      ElMessage[this.isCorrect ? 'success' : 'error'](
+        this.isCorrect
+          ? '回答正确！'
+          : `回答错误，正确答案：${this.questionData.answer}`
+      )
     },
-    // 提交评论
-    submitComment() {
-      if (!this.commentContent.trim()) {
-        this.$message.warning('请输入评论内容');
-        return;
-      }
+
+    /* 拉取最新题目 */
+    async refreshQuestion() {
+      this.selectedOption = ''
+      this.isSubmitted = false
+      this.isCorrect = false
+
       try {
-        // 实际项目中这里会调用API提交评论
-        this.$message.success('评论提交成功！');
-        this.commentContent = '';
-      } catch (error) {
-        this.$message.error('评论提交失败，请稍后重试');
-        console.error(error);
+        const dat = await api.getquestion() // 已在 api/index.js 处理 data
+        console.log(dat)
+        if (!dat || !Array.isArray(dat.data.options) || dat.data.options.length < 4) {
+          throw new Error('题目字段格式不对')
+        }
+
+        /* 后端给的是数组 [A,B,C,D]，这里组装成对象方便模板 v-for */
+        this.questionData = {
+          question: dat.data.question,
+          options: {
+            A: dat.data.options[0] ?? '', // 使用 ?? 防御 undefined
+            B: dat.data.options[1] ?? '',
+            C: dat.data.options[2] ?? '',
+            D: dat.data.options[3] ?? ''
+          },
+          answer: dat.data.answer,
+          _id: dat.data._id
+        }
+      } catch (err) {
+        console.error('[refreshQuestion] ', err)
+        ElMessage.error('获取题目失败，请稍后重试')
       }
-    },
-    question_add()  {
-      this.questionData = {
-        
-      }
-    }  
+    }
   }
-};
+}
 </script>
 
 <style scoped>
@@ -196,6 +263,14 @@ export default {
 .page-title {
   font-size: 15px;
   font-weight: 500;
+}
+
+.class-button {
+  font-size: 15px;
+  font-weight: 500;
+  background-color: transparent; /* 设置背景颜色为透明 */
+  border: none; /* 可选：如果不需要边框，可以设置边框为透明或移除 */
+  padding: 5px;
 }
 
 /* 主内容区样式 */

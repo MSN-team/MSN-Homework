@@ -1,6 +1,5 @@
 import os
 from urllib.parse import quote_plus
-from pymongo import MongoClient
 from datetime import  datetime
 
 class Config:
