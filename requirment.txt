@@ -5,3 +5,16 @@ pip install flask_migrate
 pip install flask_cors==3.0.10
 pip install pymysql
 yarn install
+pip install cryptography
+
+pip install uvicorn
+pip install fastapi
+pip install pdfplumber
+pip install pymongo
+pip install dotenv
+pip install spacy
+python -m spacy download en_core_web_sm
+
+pip install transformers
+pip install python-multipart
+pip install torch torchvision torchaudio

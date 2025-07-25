@@ -1,3 +1,4 @@
+
 <template>
   <div class="app-container">
     <!-- 导航栏 -->
@@ -11,10 +12,14 @@
               </div>
             </el-dropdown>
             <h3 class="app-title">微课堂</h3>
+            <h3 class="app-title2">欢迎回来,{{ studentname }}</h3>
           </div>
           <div class="right-section">
             <el-button class="class-button" type="primary" @click="joinClass">
               加入课堂
+            </el-button>
+            <el-button class="class-button" type="primary" @click="returnlogin()">
+              退出
             </el-button>
             <!-- <span class="page-title">听众界面</span> -->
           </div>
@@ -49,16 +54,16 @@
           >
             提交答案
           </el-button>
-          <br>
+          <!-- <br> -->
           <!-- 刷新按钮 -->
-          <el-button
+          <!-- <el-button
             class="submit-btn"
             type="primary"
             @click="refreshQuestion"
             :disabled="!selectedOption || isSubmitted"
           >
             刷新
-          </el-button>
+          </el-button> -->
           <!-- 答案结果 -->
           <div v-if="isSubmitted" class="answer-result">
             <el-descriptions column="1" border>
@@ -84,17 +89,18 @@
             type="textarea"
             :rows="4"
             placeholder="请输入评论内容..."
-            v-model="commentContent"
+            v-model="text"
           >
           </el-input>
           <el-button
-            class="comment-btn"
-            type="primary"
-            @click="submitComment"
-            :disabled="!commentContent.trim()"
-          >
-            提交评论
-          </el-button>
+  class="comment-btn"
+  type="primary"
+  @click="submitComment"
+  :disabled="!text.trim()"
+>
+  提交评论
+</el-button>
+
         </el-card>
       </div>
     </div>
@@ -106,7 +112,7 @@
           <el-input v-model="form.name" placeholder="请输入老师用户名"></el-input>
         </el-form-item>
         <el-form-item label="课堂密码">
-          <el-input v-model="form.classid" type="classId" placeholder="请输入课堂暗号"></el-input>
+          <el-input v-model="form.classId" type="classId" placeholder="请输入课堂码"></el-input>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -121,23 +127,35 @@
 
 <script>
 import { ElMessage } from 'element-plus'
+import {  reactive } from 'vue';
 import api from '@/api/index.js'
+import { useRouter } from 'vue-router';
+import {  ref } from 'vue';
+
 
 export default {
   name: 'MicroClassroom',
 
   data() {
     return {
+      studentname: localStorage.getItem('studentname') || '', 
       questionData: { question: '', options: { A: '', B: '', C: '', D: '' }, answer: '' },
       selectedOption: '',
       isSubmitted: false,
       isCorrect: false,
-      commentContent: '',
+      text:'',
       dialogVisible: false, // 对话框显示控制变量
       form: {
-        className: '',
-        classPassword: ''
-      }
+        name: '',
+        classId: ''
+      },
+      comment:{
+        username:'',
+        name:'',
+        text:'',
+        classId:'',
+      },
+      isconnect:false,
     }
   },
 
@@ -147,25 +165,56 @@ export default {
     }
   },
 
-  mounted() {
-    this.refreshQuestion()
-  },
+  // mounted() {
+  //   if(this.isconnect==true)
+  //   this.refreshQuestion()
+  // },
 
   methods: {
+    submitComment(){
+      if(!this.isconnect) 
+    {
+      ElMessage.warning('请先连接课堂')
+      return
+    }
+      this.comment.classId = this.form.classId;
+      this.comment.name = this.form.name;
+      this.comment.text = this.text;
+      this.comment.username=this.studentname;
+        api.getAddcomment(this.comment)
+        .then(res=>{
+          if(res.data.status===200)
+          ElMessage.success(res.data.msg)
+        })
+    },
+    returnlogin() {
+      this.$router.push('/login')  // 使用 this.$router 来跳转
+    },
+
     joinClass() {
       this.dialogVisible = true; // 打开对话框
     },
-
+    
     submitJoinClass() {
       // 提交加入课堂的逻辑
-      if (!this.form.className || !this.form.classPassword) {
-        ElMessage.warning('请填写课堂名称和密码')
+      if (!this.form.name || !this.form.classId) {
+        ElMessage.warning('请填写老师名称和课堂码')
         return
       }
-      // 这里可以调用后端API来验证课堂名称和密码
-      // 例如：api.joinClass(this.form.className, this.form.classPassword)
+      api.getJoinclass(this.form)
+      .then(res=>{
+        if(res.data.status===200)
+      {
+        this.isconnect=true;
+      this.refreshQuestion();
       this.dialogVisible = false; // 关闭对话框
-      ElMessage.success('加入课堂成功！')
+      ElMessage.success(`已加入课堂：${this.form.classId}`)
+      }
+       if(res.data.status===400)
+      {
+      ElMessage.warning(res.data.msg)
+      }
+      })
     },
 
     /* 下拉头像菜单示例 */
@@ -251,10 +300,16 @@ export default {
 
 .app-title {
   margin-left: 20px;
+  font-size: 36px;
+  font-weight: 500;
+  color: #000;
+}
+.app-title2 {
+  margin-left: 20px;
   font-size: 18px;
   font-weight: 500;
+  color: #ffffff;
 }
-
 .right-section {
   display: flex;
   align-items: center;

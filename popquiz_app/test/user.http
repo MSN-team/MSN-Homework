@@ -1,9 +1,0 @@
-POST http://127.0.0.1:5000/user/users/
-Content-Type: application/json
-
-{
-    "name": "xjc",
-    "pwd": "123456",
-    "real_pwd": "123456",
-    "identity": "student"
-}
