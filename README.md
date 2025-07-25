@@ -54,15 +54,15 @@ PopQuiz （简称 **PQ**）是一套面向 **课堂、培训与会议** 的实�
 # 1. 克隆仓库
 $ git clone https://github.com/MSN-team/MSN-Homework.git && cd popquiz_app
 # 2. 激活虚拟环境
-$ .\flask_venv\Scripts\Activate  
-（或者根据"requirement.txt"中安装相应的包）
+$ python -m venv venv &&.\venv\Scripts\activate
+（根据"requirement.txt"中安装相应的依赖包）
 # 3. 数据库初始化
 $ $env:FLASK_APP="myapp" && flask db init && flask db migrate && flask db upgrade
 $ Make sure MongoDB is running locally on `mongodb://localhost:27017/`.
 （注： flask db init 仅需第一次运行执行此指令）
 # 4. 启动后端（FastAPI + Flask + MongoDB）
 $  python myapp.py 
-$ uvicorn main:app --reload
+$ cd popquiz && uvicorn main:app --reload
 # 5. 启动前端
 $ cd popquize_vue
 $ yarn serve
